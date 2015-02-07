@@ -49,7 +49,6 @@ public class AuctionSearch implements IAuctionSearch {
          * placed at src/edu/ucla/cs/cs144.
          *
          */
-	//private Connection conn = null;
 	private IndexSearcher searcher = null;
     private QueryParser parser = null;
 
@@ -57,12 +56,6 @@ public class AuctionSearch implements IAuctionSearch {
 			int numResultsToReturn) {
 		// TODO: Your code here!
 		SearchResult[] searchResults = new SearchResult[numResultsToReturn - numResultsToSkip];
-
-		//try {
-		//	conn= DbManager.getConnection(true);
-		//} catch (SQLException ex) {
-		//	System.out.println(ex);
-		//}
 		try {
 			searcher = new IndexSearcher(DirectoryReader.open(FSDirectory.open(new File("/var/lib/lucene/index1"))));
         	parser = new QueryParser("content", new StandardAnalyzer());
@@ -80,18 +73,12 @@ public class AuctionSearch implements IAuctionSearch {
 		TopDocs topDocs = null;
 		try {
 			topDocs = searcher.search(parsedQuery, numResultsToSkip + numResultsToReturn);
-		} catch (IOException ex) {
-			System.out.println(ex);
-		}
-
-		try {
 			ScoreDoc[] hits = topDocs.scoreDocs;
 			for (int i = numResultsToSkip; i < hits.length; i++) {
-				//if(i < numResultsToSkip) continue;
 				Document doc = searcher.doc(hits[i].doc);;
     			String name = doc.get("Name");
     			String itemId = doc.get("ItemID");
-    			searchResults[i - numResultsToSkip] = new SearchResult(itemId, name);// ??
+    			searchResults[i - numResultsToSkip] = new SearchResult(itemId, name);
     			System.out.println("itemId: " + itemId + " name: " + name);
 			}
 
