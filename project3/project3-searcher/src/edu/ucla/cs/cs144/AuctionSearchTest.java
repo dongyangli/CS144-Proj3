@@ -21,7 +21,10 @@ public class AuctionSearchTest {
 		System.out.println("Basic Seacrh Query: " + query);
 		System.out.println("Received " + basicResults.length + " results");
 		for(SearchResult result : basicResults) {
-			System.out.println(result.getItemId() + ": " + result.getName());
+			if ( result == null) {
+				System.out.println("null result found");
+			} else
+				System.out.println(result.getItemId() + ": " + result.getName());
 		}
 		
 		SearchRegion region =

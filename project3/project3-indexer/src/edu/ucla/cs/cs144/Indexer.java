@@ -33,12 +33,11 @@ public class Indexer {
         Connection conn = null;
 
         // create a connection to the database to retrieve Items from MySQL
-	try {
-	    conn = DbManager.getConnection(true);
-	} catch (SQLException ex) {
-	    System.out.println(ex);
-	}
-
+        try {
+            conn = DbManager.getConnection(true);
+        } catch (SQLException ex) {
+            System.out.println(ex);
+        }
 
 	/*
 	 * Add your code here to retrieve Items using the connection
@@ -58,15 +57,76 @@ public class Indexer {
          * and place your class source files at src/edu/ucla/cs/cs144/.
 	 * 
 	 */
+        //IndexWriter indexWriter = new IndexWriter(FSDirectory.open(new File("index-directory")), new IndexWriterConfig(Version.LUCENE_4_10_2, new StandardAnalyzer()));
+        //IndexWriter indexWriter = new IndexWriter(System.getenv("LUCENE_INDEX"), new StandardAnalyzer(), true);
+        IndexWriter indexWriter = null;
+        try {
+            Directory indexDir = FSDirectory.open(new File("/var/lib/lucene/index1"));
+            IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_4_10_2, new StandardAnalyzer());
+            config.setOpenMode(IndexWriterConfig.OpenMode.CREATE);
+            indexWriter = new IndexWriter(indexDir, config);
+        } catch (IOException ex){
+            System.out.println("SQLException: " + ex.getMessage());
+        }
 
+        //retrieve itemID, name, category, description from db
+        Statement stmt = null;
+        ResultSet rs = null;
+        try {
+            stmt = conn.createStatement();
+            rs = stmt.executeQuery("SELECT ItemID, Name, Description FROM Items");
+        } catch (SQLException ex){
+            System.out.println("SQLException: " + ex.getMessage());
+        }
+        try {
+            while(rs.next()){
+                //retrieve category from db
+                ResultSet rs_cate = null;
+                String selectSQL = "SELECT GROUP_CONCAT(Category SEPARATOR ' ') AS ItemCate FROM ItemCategory WHERE ItemID = ?";
+                PreparedStatement prepareSelectCate = conn.prepareStatement(selectSQL);
+                prepareSelectCate.setInt(1, rs.getInt("ItemID"));
+                rs_cate = prepareSelectCate.executeQuery();
+                rs_cate.next();
+
+                Document doc = new Document();
+                doc.add(new StringField("ItemID", rs.getInt("ItemID") + "", Field.Store.YES));
+                doc.add(new StringField("Name", rs.getString("Name"), Field.Store.YES));
+                doc.add(new StringField("Description", rs.getString("Description"), Field.Store.NO));
+                doc.add(new StringField("Category", rs_cate.getString("ItemCate"), Field.Store.NO));
+                String fullSearchableText = rs.getInt("ItemID") + " " + rs.getString("Name") + " " + rs.getString("Description") + " " + rs_cate.getString("ItemCate");
+                doc.add(new TextField("content", fullSearchableText, Field.Store.NO));
+
+                try { 
+                    indexWriter.addDocument(doc);
+                } catch (IOException ex){
+                    System.out.println("IOException: " + ex.getMessage());
+                }
+
+                prepareSelectCate.close();
+                rs_cate.close();
+            }
+
+        } catch (SQLException ex) {
+            System.out.println("SQLException: " + ex.getMessage());
+        }   
+
+        try { 
+            indexWriter.close();
+        } catch (IOException ex){
+            System.out.println("IOException: " + ex.getMessage());
+        }
 
         // close the database connection
-	try {
-	    conn.close();
-	} catch (SQLException ex) {
-	    System.out.println(ex);
-	}
-    }    
+        try {
+            stmt.close();
+            rs.close();
+
+            conn.close();
+        } catch (SQLException ex) {
+            System.out.println(ex);
+        }
+
+    }// end rebuildIndexes
 
     public static void main(String args[]) {
         Indexer idx = new Indexer();
