@@ -11,3 +11,4 @@ INSERT INTO ItemLocation(ItemID, Location) SELECT ItemID, POINT(Latitude, Longit
 #ALTER TABLE ItemLocation ADD SPATIAL INDEX(Location);
 #CREATE SPATIAL INDEX sp_index ON ItemLocation (Location);
 
+#SELECT ItemID, AsText(Location) FROM ItemLocation; 

@@ -33,6 +33,11 @@ import edu.ucla.cs.cs144.DbManager;
 import edu.ucla.cs.cs144.SearchRegion;
 import edu.ucla.cs.cs144.SearchResult;
 
+import java.sql.Timestamp;
+import java.text.StringCharacterIterator;
+import java.text.CharacterIterator;
+
+
 public class AuctionSearch implements IAuctionSearch {
 
 	/* 
@@ -51,14 +56,19 @@ public class AuctionSearch implements IAuctionSearch {
          */
 	private IndexSearcher searcher = null;
     private QueryParser parser = null;
+    private Connection conn = null;
+
+    private void initLuceneIndex() throws IOException{
+		searcher = new IndexSearcher(DirectoryReader.open(FSDirectory.open(new File("/var/lib/lucene/"))));
+        parser = new QueryParser("content", new StandardAnalyzer());
+    }
 
 	public SearchResult[] basicSearch(String query, int numResultsToSkip, 
 			int numResultsToReturn) {
 		// TODO: Your code here!
 		SearchResult[] searchResults = new SearchResult[numResultsToReturn - numResultsToSkip];
 		try {
-			searcher = new IndexSearcher(DirectoryReader.open(FSDirectory.open(new File("/var/lib/lucene/index1"))));
-        	parser = new QueryParser("content", new StandardAnalyzer());
+			initLuceneIndex();
 		} catch (IOException ex) {
 			System.out.println(ex);
 		}
@@ -93,12 +103,202 @@ public class AuctionSearch implements IAuctionSearch {
 	public SearchResult[] spatialSearch(String query, SearchRegion region,
 			int numResultsToSkip, int numResultsToReturn) {
 		// TODO: Your code here!
+		// get results within the desired region
+		// check if they belong to the inverted index first
+		// check region ?
+		// intersection ?
+		try {
+			initLuceneIndex();
+		} catch (IOException ex) {
+			System.out.println(ex);
+		}
+
+		
+
+
+
+		
+
 		return new SearchResult[0];
 	}
 
+	// helper methods for getXMLDataForItemId
+	private String stringToXML(String text){
+
+		StringBuilder result = new StringBuilder();
+		StringCharacterIterator iterator = new StringCharacterIterator(text);
+		char character =  iterator.current();
+		while (character != CharacterIterator.DONE ){
+      		if (character == '<') {
+        		result.append("&lt;");
+      		} else if (character == '>') {
+      			result.append("&gt;");
+      		} else if (character == '\"') {
+      			result.append("&quot;");
+      		} else if (character == '\'') {
+      			result.append("&apos;");
+      		} else if (character == '&') {
+      			result.append("&amp;");
+      		} else if (character == '\\') {
+      			result.append("\\");
+      		} else {
+      			//the char is not a special one
+      			//add it to the result as is
+      			result.append(character);
+      		}
+      		character = iterator.next();
+      	}
+    	return result.toString();
+	}
+
+	private String bidXMLBuildHelper(String xmlString, String bidderID, String dbTime, String amount){
+		String rating = "";
+		String location = "";
+		String country = "";
+
+		try {
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery("SELECT * FROM Bidders WHERE UserID ='" + bidderID + "'");
+			while(rs.next()) {
+				rating = Integer.toString(rs.getInt("Rating"));
+				location = rs.getString("Location");
+				country = rs.getString("Country");
+			}
+			xmlString += "		<Bid>" + "\n";
+			xmlString += "			<Bidder " + "UserID=\"" + stringToXML(bidderID) + "\" " + "Rating=\"" + stringToXML(rating) + "\">" + "\n";
+			xmlString += "				<Location>" + stringToXML(location) + "</Location>" + "\n";
+			xmlString += "				<Country>" + stringToXML(country) + "</Country>" + "\n";
+			xmlString += "			</Bidder>" + "\n";
+			xmlString += "			<Time>" + stringToXML(convertTime(dbTime)) + "</Time>" + "\n";
+			xmlString += "			<Amount>" + "$" + stringToXML(amount) + "</Amount>" + "\n";
+			xmlString += "		</Bid>" + "\n";
+		} catch(SQLException ex){
+			System.out.println(ex);
+		}
+
+		return xmlString;
+	}
+
+	private String convertTime(String timeString){
+		try {
+			SimpleDateFormat xmlFormat = new SimpleDateFormat("MMM-dd-yy HH:mm:ss");
+			SimpleDateFormat dbFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			timeString = xmlFormat.format(dbFormat.parse(timeString));
+
+		} catch(Exception ex){
+			System.out.println(ex);
+		}
+		return timeString;
+	}
+
+	// end helper methods
+
 	public String getXMLDataForItemId(String itemId) {
+
 		// TODO: Your code here!
-		return "";
+		String xmlString = "<Item ItemID=\"" + itemId + "\">" + "\n";
+		String name = "";
+		//String[] Categories;
+		String currently = "";
+		String buyPrice = "";
+		String firstBid = "";
+		String numberOfBids = "";
+		// Bids
+
+		// end Bids
+		String location = "";
+			String latitude = "";
+			String longitude = "";
+		String country = "";
+		
+		String started = "";
+		String ends = "";
+
+		// Seller
+		String sellerID = "";
+		String rating = "";
+		// Description
+		String description = "";
+
+		try {
+
+			conn = DbManager.getConnection(true);
+	  		Statement stmt = conn.createStatement();
+	  		ResultSet rs = stmt.executeQuery("SELECT * FROM Items " + "WHERE Items.ItemID = " + itemId);
+	  		while (rs.next()) {
+				sellerID = rs.getString("SellerID");
+
+				name = rs.getString("Name");
+
+				location = rs.getString("Location");
+				if (rs.getFloat("Latitude") != 0.00f)
+					latitude = "Latitude=\"" + Float.toString(rs.getFloat("Latitude")) + "\" ";
+				if (rs.getFloat("Longitude") != 0.00f)
+					longitude = "Longitude=\"" + Float.toString(rs.getFloat("Longitude")) + "\"";
+
+				country = rs.getString("Country");
+
+				currently = Float.toString(rs.getFloat("Currently"));
+
+				firstBid = Float.toString(rs.getFloat("FirstBid"));
+
+				buyPrice = String.format("%.2f", rs.getFloat("BuyPrice"));
+
+				numberOfBids = Integer.toString(rs.getInt("NumberOfBids"));
+				started = rs.getTimestamp("Started").toString();
+				ends = rs.getTimestamp("Ends").toString();
+				description = rs.getString("Description").toString();
+			}
+			// name
+			xmlString += "	<Name>" + stringToXML(name) + "</Name>" + "\n";
+			// categroies
+			rs = stmt.executeQuery("SELECT * FROM ItemCategory WHERE ItemID = " + itemId);
+			while (rs.next()) {
+				xmlString += "	<Category>" + stringToXML(rs.getString("Category")) + "</Category>" +"\n";
+			}
+			// currently
+			xmlString += "	<Currently>" + "$" + stringToXML(currently) + "<Currently>" + "\n";
+			// buyPrice
+			if(!buyPrice.equals("0.00"))
+				xmlString += "	<Buy_Price>" + "$" + stringToXML(buyPrice) + "<Buy_Price>" + "\n";
+			// firstBid
+			xmlString += "	<First_Bid>" + "$" + stringToXML(firstBid) + "</First_Bid>" + "\n";
+			// numberOfBid
+			xmlString += "	<Number_of_Bids>" + stringToXML(numberOfBids) + "</Number_of_Bids>" + "\n";
+			// bids
+			xmlString += "	<Bids>" + "\n";
+			rs = stmt.executeQuery("SELECT * FROM Bids WHERE ItemID=" + itemId);
+			while(rs.next()){
+				xmlString = bidXMLBuildHelper(xmlString, rs.getString("BidderID"), rs.getTimestamp("Time").toString(), Float.toString(rs.getFloat("Amount")));
+			}
+			xmlString += "	</Bids>" + "\n";
+			// country and location
+			xmlString += "	<Location " + latitude + longitude + ">" + stringToXML(location) + "<Location>" + "\n";
+			xmlString += "	<Country>" + stringToXML(country) + "<Country>" + "\n";
+			// started and ends
+			xmlString += "	<Started>" + stringToXML(convertTime(started)) + "<Started>" + "\n";
+			xmlString += "	<Ends>" + stringToXML(convertTime(ends)) + "</Ends>" + "\n";
+
+			// seller
+			rs = stmt.executeQuery("SELECT * FROM Sellers WHERE UserID ='" + sellerID + "'");
+			while (rs.next()) {
+				rating = Integer.toString(rs.getInt("Rating"));
+			}
+			xmlString += "	<Seller " + "UserID=\"" + stringToXML(sellerID) + "\" " + "Rating=\"" + stringToXML(rating) + "\"/>" + "\n";
+			// description
+			xmlString += "	<Description>" + stringToXML(description) + "</Description>" + "\n";
+			// close item
+			xmlString += "</Item>";
+
+			// close database
+	  		stmt.close();
+    		rs.close();
+	  		conn.close();
+		} catch (SQLException ex){
+			System.out.println(ex);
+		}
+		
+		return xmlString;
 	}
 	
 	public String echo(String message) {

@@ -61,7 +61,7 @@ public class Indexer {
         //IndexWriter indexWriter = new IndexWriter(System.getenv("LUCENE_INDEX"), new StandardAnalyzer(), true);
         IndexWriter indexWriter = null;
         try {
-            Directory indexDir = FSDirectory.open(new File("/var/lib/lucene/index1"));
+            Directory indexDir = FSDirectory.open(new File("/var/lib/lucene/"));
             IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_4_10_2, new StandardAnalyzer());
             config.setOpenMode(IndexWriterConfig.OpenMode.CREATE);
             indexWriter = new IndexWriter(indexDir, config);
