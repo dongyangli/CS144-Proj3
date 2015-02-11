@@ -36,6 +36,7 @@ import edu.ucla.cs.cs144.SearchResult;
 import java.sql.Timestamp;
 import java.text.StringCharacterIterator;
 import java.text.CharacterIterator;
+import java.util.HashMap;
 
 
 public class AuctionSearch implements IAuctionSearch {
@@ -66,7 +67,7 @@ public class AuctionSearch implements IAuctionSearch {
 	public SearchResult[] basicSearch(String query, int numResultsToSkip, 
 			int numResultsToReturn) {
 		// TODO: Your code here!
-		SearchResult[] searchResults = new SearchResult[numResultsToReturn - numResultsToSkip];
+		ArrayList<SearchResult> resultList = new ArrayList<SearchResult>();
 		try {
 			initLuceneIndex();
 		} catch (IOException ex) {
@@ -88,38 +89,66 @@ public class AuctionSearch implements IAuctionSearch {
 				Document doc = searcher.doc(hits[i].doc);;
     			String name = doc.get("Name");
     			String itemId = doc.get("ItemID");
-    			searchResults[i - numResultsToSkip] = new SearchResult(itemId, name);
-    			System.out.println("itemId: " + itemId + " name: " + name);
+    			resultList.add(new SearchResult(itemId, name));
 			}
 
 		}catch (IOException ex) {
 			System.out.println(ex);
 		}
 		
-
+		// put results into array
+		SearchResult[] searchResults = new SearchResult[resultList.size()];
+		for ( int i = 0; i < resultList.size() ;i++ ) {
+			searchResults[i] = resultList.get(i);
+		}
 		return searchResults;
 	}
 
+	private String prepareSpatialSQLQuery(SearchRegion region) {
+		//SET @g1 = GeomFromText('Polygon((33.774 -118.63, 33.774 -117.38, 34.201 -117.38, 34.201 -118.63, 33.774 -118.63))');
+		//SELECT ItemID, AsText(Location) FROM ItemLocation WHERE MBRContains(@g1, Location);
+		String polygonVar = "GeomFromText(' Polygon((" + Double.toString(region.getLx()) + " " + Double.toString(region.getLy()) + ", " + 
+										Double.toString(region.getLx()) + " " + Double.toString(region.getRy()) + ", " +
+										Double.toString(region.getRx()) + " " + Double.toString(region.getRy()) + ", " +
+										Double.toString(region.getRx()) + " " + Double.toString(region.getLy()) + ", " +
+										Double.toString(region.getLx()) + " " + Double.toString(region.getLy()) + ")) ')";
+		String sqlQuery = "SELECT ItemID FROM ItemLocation WHERE MBRContains("+ polygonVar +", Location);";
+		return sqlQuery;
+	}
 	public SearchResult[] spatialSearch(String query, SearchRegion region,
 			int numResultsToSkip, int numResultsToReturn) {
 		// TODO: Your code here!
-		// get results within the desired region
-		// check if they belong to the inverted index first
-		// check region ?
-		// intersection ?
+		// word requirement
+		SearchResult[] basicSearchResults = basicSearch(query, 0, 19532);
+		HashMap<String, String> hash = new HashMap<>();
+		for (int i = 0; i < basicSearchResults.length ; i++ ) {
+			hash.put(basicSearchResults[i].getItemId(), basicSearchResults[i].getName());
+		}
+		// spatial requirement 
+		ArrayList<SearchResult> resultList = new ArrayList<SearchResult>();
+		
+		String sqlQuery = prepareSpatialSQLQuery(region);
 		try {
-			initLuceneIndex();
-		} catch (IOException ex) {
+			conn = DbManager.getConnection(true);
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sqlQuery);
+			while(rs.next()) {
+				String itemId = Integer.toString(rs.getInt("ItemID"));
+				if (hash.containsKey(itemId)) {
+					resultList.add(new SearchResult(itemId, hash.get(itemId)));
+				}
+			}
+
+		}catch (SQLException ex ){
 			System.out.println(ex);
 		}
 
-		
-
-
-
-		
-
-		return new SearchResult[0];
+		// put results into array
+		SearchResult[] searchResults = new SearchResult[resultList.size()];
+		for ( int i = 0; i < resultList.size(); i++ ) {
+			searchResults[i] = resultList.get(i);
+		}
+		return searchResults;
 	}
 
 	// helper methods for getXMLDataForItemId
@@ -157,6 +186,7 @@ public class AuctionSearch implements IAuctionSearch {
 		String country = "";
 
 		try {
+			conn = DbManager.getConnection(true);
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("SELECT * FROM Bidders WHERE UserID ='" + bidderID + "'");
 			while(rs.next()) {
