@@ -13,6 +13,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.PreparedStatement;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.analysis.Analyzer;
@@ -127,11 +128,22 @@ public class AuctionSearch implements IAuctionSearch {
 		// spatial requirement 
 		ArrayList<SearchResult> resultList = new ArrayList<SearchResult>();
 		
-		String sqlQuery = prepareSpatialSQLQuery(region);
+		//String sqlQuery = prepareSpatialSQLQuery(region);
+		String polygonVar = "GeomFromText(' Polygon((" + Double.toString(region.getLx()) + " " + Double.toString(region.getLy()) + ", " + 
+										Double.toString(region.getLx()) + " " + Double.toString(region.getRy()) + ", " +
+										Double.toString(region.getRx()) + " " + Double.toString(region.getRy()) + ", " +
+										Double.toString(region.getRx()) + " " + Double.toString(region.getLy()) + ", " +
+										Double.toString(region.getLx()) + " " + Double.toString(region.getLy()) + ")) ')";
+		String sqlQuery = "SELECT ItemID FROM ItemLocation WHERE MBRContains(?, Location);";
+
 		try {
 			conn = DbManager.getConnection(true);
-			Statement stmt = conn.createStatement();
-			ResultSet rs = stmt.executeQuery(sqlQuery);
+			//Statement stmt = conn.createStatement();
+			//ResultSet rs = stmt.executeQuery(sqlQuery);
+			PreparedStatement preparesql = conn.prepareStatement(sqlQuery);
+        	preparesql.setString(1, polygonVar);
+        	ResultSet rs = preparesql.executeQuery();
+
 			while(rs.next()) {
 				String itemId = Integer.toString(rs.getInt("ItemID"));
 				if (hash.containsKey(itemId)) {
@@ -145,7 +157,7 @@ public class AuctionSearch implements IAuctionSearch {
 
 		// put results into array
 		SearchResult[] searchResults = new SearchResult[resultList.size()];
-		for ( int i = 0; i < resultList.size(); i++ ) {
+		for ( int i = numResultsToSkip; i < resultList.size() && i < numResultsToReturn + numResultsToSkip; i++ ) {
 			searchResults[i] = resultList.get(i);
 		}
 		return searchResults;
@@ -187,8 +199,13 @@ public class AuctionSearch implements IAuctionSearch {
 
 		try {
 			conn = DbManager.getConnection(true);
-			Statement stmt = conn.createStatement();
-			ResultSet rs = stmt.executeQuery("SELECT * FROM Bidders WHERE UserID ='" + bidderID + "'");
+			//Statement stmt = conn.createStatement();
+			//ResultSet rs = stmt.executeQuery("SELECT * FROM Bidders WHERE UserID ='" + bidderID + "'");
+
+			PreparedStatement prepareSelectsql = conn.prepareStatement("SELECT * FROM Bidders WHERE UserID ='?'");
+            prepareSelectsql.setString(1, bidderID);
+            ResultSet rs = prepareSelectsql.executeQuery();
+
 			while(rs.next()) {
 				rating = Integer.toString(rs.getInt("Rating"));
 				location = rs.getString("Location");
@@ -287,10 +304,10 @@ public class AuctionSearch implements IAuctionSearch {
 				xmlString += "	<Category>" + stringToXML(rs.getString("Category")) + "</Category>" +"\n";
 			}
 			// currently
-			xmlString += "	<Currently>" + "$" + stringToXML(currently) + "<Currently>" + "\n";
+			xmlString += "	<Currently>" + "$" + stringToXML(currently) + "</Currently>" + "\n";
 			// buyPrice
 			if(!buyPrice.equals("0.00"))
-				xmlString += "	<Buy_Price>" + "$" + stringToXML(buyPrice) + "<Buy_Price>" + "\n";
+				xmlString += "	<Buy_Price>" + "$" + stringToXML(buyPrice) + "</Buy_Price>" + "\n";
 			// firstBid
 			xmlString += "	<First_Bid>" + "$" + stringToXML(firstBid) + "</First_Bid>" + "\n";
 			// numberOfBid
@@ -303,10 +320,10 @@ public class AuctionSearch implements IAuctionSearch {
 			}
 			xmlString += "	</Bids>" + "\n";
 			// country and location
-			xmlString += "	<Location " + latitude + longitude + ">" + stringToXML(location) + "<Location>" + "\n";
-			xmlString += "	<Country>" + stringToXML(country) + "<Country>" + "\n";
+			xmlString += "	<Location " + latitude + longitude + ">" + stringToXML(location) + "</Location>" + "\n";
+			xmlString += "	<Country>" + stringToXML(country) + "</Country>" + "\n";
 			// started and ends
-			xmlString += "	<Started>" + stringToXML(convertTime(started)) + "<Started>" + "\n";
+			xmlString += "	<Started>" + stringToXML(convertTime(started)) + "</Started>" + "\n";
 			xmlString += "	<Ends>" + stringToXML(convertTime(ends)) + "</Ends>" + "\n";
 
 			// seller
