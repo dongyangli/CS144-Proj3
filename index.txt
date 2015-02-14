@@ -1,0 +1,45 @@
+Dropping existing SQL index from dropSQLIndex.sql...
+Creating SQL index from buildSQLIndex.sql...
+Removing existing lucene index...
+Running 'ant compile' to compile your indexer...
+Buildfile: /tmp/p3a-grading/build.xml
+
+init:
+    [mkdir] Created dir: /tmp/p3a-grading/bin
+
+compile:
+     [echo] project3: /tmp/p3a-grading/build.xml
+    [javac] Compiling 2 source files to /tmp/p3a-grading/bin
+
+BUILD SUCCESSFUL
+Total time: 1 second
+Running 'ant run' to create lucene index(ex)...
+Buildfile: /tmp/p3a-grading/build.xml
+
+init:
+
+compile:
+     [echo] project3: /tmp/p3a-grading/build.xml
+
+run:
+
+BUILD SUCCESSFUL
+Total time: 14 seconds
+Finished creating lucene index
+This is the current content of the lucene index directory:
+_0.cfe
+_0.cfs
+_0.si
+_1.cfe
+_1.cfs
+_1.si
+_2.cfe
+_2.cfs
+_2.si
+segments_1
+segments.gen
+write.lock
+
+
+Finished checking Project 3A submission
+Please check the output of this script to ensure a proper submission

@@ -65,6 +65,11 @@ public class AuctionSearchTest {
 		String item2 = as.getXMLDataForItemId(itemId2);
 		System.out.println("XML data for ItemId: " + itemId2);
 		System.out.println(item2);
+        
+        String itemId3 = "1123124";
+        String item3 = as.getXMLDataForItemId(itemId3);
+        System.out.println("XML data for ItemId: " + itemId3);
+        System.out.println(item3);
 		
 	}
 }

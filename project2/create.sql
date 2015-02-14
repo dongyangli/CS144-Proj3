@@ -1,0 +1,78 @@
+CREATE TABLE IF NOT EXISTS Users
+(
+ 	UserID     VARCHAR(100) NOT NULL,
+ 	#Rating     INT(11) NOT NULL,
+ 	Location   VARCHAR(100),
+	Latitude   FLOAT( 10, 6 ),
+	Longitude  FLOAT( 10, 6 ),
+ 	Country    VARCHAR(100),
+ 
+ 	PRIMARY KEY(UserID)
+);
+
+CREATE TABLE IF NOT EXISTS Sellers
+(
+ 	UserID     VARCHAR(100) NOT NULL,
+ 	Rating     INT(11) NOT NULL,
+	FOREIGN KEY (UserID) REFERENCES Users(UserID),
+	PRIMARY KEY(UserID)
+);
+
+CREATE TABLE IF NOT EXISTS Bidders
+(
+ 	UserID     VARCHAR(100) NOT NULL,
+ 	Rating     INT(11) NOT NULL,
+	FOREIGN KEY (UserID) REFERENCES Users(UserID),
+	PRIMARY KEY(UserID)
+);
+
+CREATE TABLE IF NOT EXISTS Items 
+(
+	ItemID 			INT(11) NOT NULL,
+	SellerID		VARCHAR(100) NOT NULL,
+	Name			VARCHAR(100) NOT NULL,
+ 	Location   		VARCHAR(100) NOT NULL,
+	Latitude		FLOAT( 10, 6 ),
+	Longitude		FLOAT( 10, 6 ),
+ 	Country    		VARCHAR(100) NOT NULL,
+	Description 	VARCHAR(4000) NOT NULL,
+	
+	BuyPrice 		DECIMAL(8, 2),
+	FirstBid 		DECIMAL(8, 2) NOT NULL,
+	Currently 		DECIMAL(8, 2) NOT NULL,
+	NumberOfBids 	INT(11),
+	Started 		TIMESTAMP NOT NULL,
+	Ends			TIMESTAMP NOt NULL,
+	
+	FOREIGN KEY(SellerID) REFERENCES Sellers(UserID),
+	PRIMARY KEY(ItemID)
+);
+
+CREATE TABLE IF NOT EXISTS Categories (
+	Category VARCHAR(255) NOT NULL PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS ItemCategory
+(
+ 	ItemID   INT(11) NOT NULL,
+ 	Category VARCHAR(100) NOT NULL,
+	
+	FOREIGN KEY (ItemID) REFERENCES Items(ItemID),
+	FOREIGN KEY (Category) REFERENCES Categories(Category),
+	PRIMARY KEY(ItemID, Category)
+);
+
+CREATE TABLE IF NOT EXISTS Bids
+(
+ 	#BidID  		INT(11) NOT NULL AUTO_INCREMENT,
+ 	BidderID 	VARCHAR(100) NOT NULL,
+ 	ItemID 		INT(11) NOT NULL,
+ 	Time 		TIMESTAMP NOT NULL,
+ 	Amount 		DECIMAL(8,2) NOT NULL,
+ 	
+	FOREIGN KEY (ItemID) REFERENCES Items(ItemID),
+ 	FOREIGN KEY (BidderID) REFERENCES Bidders(UserID),
+ 	#PRIMARY KEY(BidID)
+	PRIMARY KEY(BidderID, ItemID, Time)
+);
+

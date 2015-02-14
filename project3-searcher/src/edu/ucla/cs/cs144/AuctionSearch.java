@@ -188,28 +188,28 @@ public class AuctionSearch implements IAuctionSearch {
 		try {
 			conn = DbManager.getConnection(true);
 			Statement stmt = conn.createStatement();
-			// rating
-			ResultSet rs = stmt.executeQuery("SELECT * FROM Bidders WHERE UserID ='" + bidderID + "'");
-			while(rs.next()) {
-				rating = Integer.toString(rs.getInt("Rating"));
-			}
-			// location and country
-			rs = stmt.executeQuery("SELECT * FROM Users WHERE UserID ='" + bidderID + "'");
-			while(rs.next()) {
-				location = rs.getString("Location");
-				country = rs.getString("Country");
-			}
-			// xmlString append
+            // rating
+            ResultSet rs = stmt.executeQuery("SELECT * FROM Bidders WHERE UserID ='" + bidderID + "'");
+            while(rs.next()) {
+                rating = Integer.toString(rs.getInt("Rating"));
+            }
+            // location and country
+            rs = stmt.executeQuery("SELECT * FROM Users WHERE UserID ='" + bidderID + "'");
+            while(rs.next()) {
+                location = rs.getString("Location");
+                country = rs.getString("Country");
+            }
+            // xmlString append
 			xmlString += "		<Bid>" + "\n";
 			xmlString += "			<Bidder " + "UserID=\"" + stringToXML(bidderID) + "\" " + "Rating=\"" + stringToXML(rating) + "\">" + "\n";
-			// location may not exist
-			if (location.length() > 0) {
-				xmlString += "				<Location>" + stringToXML(location) + "</Location>" + "\n";
-			}	
-			// country may not exist
-			if (country.length() > 0) {
-				xmlString += "				<Country>" + stringToXML(country) + "</Country>" + "\n";
-			}
+            // location may not exist
+            if (location.length() > 0) {
+                xmlString += "				<Location>" + stringToXML(location) + "</Location>" + "\n";
+            }
+            // country may not exist
+            if (country.length() > 0) {
+                xmlString += "				<Country>" + stringToXML(country) + "</Country>" + "\n";
+            }
 			xmlString += "			</Bidder>" + "\n";
 			xmlString += "			<Time>" + stringToXML(convertTime(dbTime)) + "</Time>" + "\n";
 			xmlString += "			<Amount>" + "$" + stringToXML(amount) + "</Amount>" + "\n";
@@ -267,7 +267,7 @@ public class AuctionSearch implements IAuctionSearch {
 			conn = DbManager.getConnection(true);
 	  		Statement stmt = conn.createStatement();
 	  		ResultSet rs = stmt.executeQuery("SELECT * FROM Items " + "WHERE Items.ItemID = " + itemId);
-	  		while (rs.next()) {
+	  		if (rs.next()) {
 				sellerID = rs.getString("SellerID");
 
 				name = rs.getString("Name");
@@ -290,7 +290,9 @@ public class AuctionSearch implements IAuctionSearch {
 				started = rs.getTimestamp("Started").toString();
 				ends = rs.getTimestamp("Ends").toString();
 				description = rs.getString("Description").toString();
-			}
+            } else {
+                return "";
+            }
 			// name
 			xmlString += "	<Name>" + stringToXML(name) + "</Name>" + "\n";
 			// categroies
@@ -307,21 +309,19 @@ public class AuctionSearch implements IAuctionSearch {
 			xmlString += "	<First_Bid>" + "$" + stringToXML(firstBid) + "</First_Bid>" + "\n";
 			// numberOfBid
 			xmlString += "	<Number_of_Bids>" + stringToXML(numberOfBids) + "</Number_of_Bids>" + "\n";
-			// bids might not exist
-			
-			rs = stmt.executeQuery("SELECT * FROM Bids WHERE ItemID=" + itemId);
-			if(rs.next()){
-				xmlString += "	<Bids>" + "\n";
-				xmlString = bidXMLBuildHelper(xmlString, rs.getString("BidderID"), rs.getTimestamp("Time").toString(), String.format("%.2f", rs.getFloat("Amount")));
-				while(rs.next()){
-					xmlString = bidXMLBuildHelper(xmlString, rs.getString("BidderID"), rs.getTimestamp("Time").toString(), String.format("%.2f", rs.getFloat("Amount")));
-				}
-				xmlString += "	</Bids>" + "\n";
-			}else{
-				xmlString += "	<Bids />" + "\n";
-			}
-			
-			
+            // bids might not exist
+            
+            rs = stmt.executeQuery("SELECT * FROM Bids WHERE ItemID=" + itemId);
+            if(rs.next()){
+                xmlString += "	<Bids>" + "\n";
+                xmlString = bidXMLBuildHelper(xmlString, rs.getString("BidderID"), rs.getTimestamp("Time").toString(), String.format("%.2f", rs.getFloat("Amount")));
+                while(rs.next()){
+                    xmlString = bidXMLBuildHelper(xmlString, rs.getString("BidderID"), rs.getTimestamp("Time").toString(), String.format("%.2f", rs.getFloat("Amount")));
+                }
+                xmlString += "	</Bids>" + "\n";
+            }else{
+                xmlString += "	<Bids />" + "\n";
+            }
 			// country and location
 			xmlString += "	<Location " + latitude + longitude + ">" + stringToXML(location) + "</Location>" + "\n";
 			xmlString += "	<Country>" + stringToXML(country) + "</Country>" + "\n";
